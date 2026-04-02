@@ -1,82 +1,112 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>A-Frame GLB Example (Zoom + Bigger Model)</title>
-    <!-- A-Frame 라이브러리 -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>A-Frame GLB Viewer</title>
+  <!-- A-Frame 라이브러리 -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+</head>
 
+<body>
+  <a-scene>
+    
+    <!-- ===================== -->
+    <!-- Assets: 3D 모델 로드 -->
+    <!-- ===================== -->
+    <a-assets>
+      <!-- model.glb 파일을 미리 로드 -->
+      <a-asset-item id="myModel" src="model.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- ===================== -->
+    <!-- 카메라 + 이동 설정 -->
+    <!-- ===================== -->
+    <a-entity id="rig" position="0 1.6 5">
+      
+      <!-- 카메라 -->
+      <a-entity 
+        camera 
+        look-controls 
+        wasd-controls="acceleration: 20"
+        position="0 0 0">
+      </a-entity>
+
+    </a-entity>
+
+    <!-- ===================== -->
+    <!-- 마우스 휠 줌 기능 -->
+    <!-- ===================== -->
     <script>
-      // 마우스 휠로 줌(앞뒤 이동) 기능 추가
-      AFRAME.registerComponent('mouse-zoom', {
-        schema: {
-          speed: { default: 0.5 } // 줌 속도 (값이 작을수록 천천히)
-        },
-        init: function () {
-          const el = this.el;
-          const data = this.data;
+      document.addEventListener('DOMContentLoaded', () => {
+        const rig = document.querySelector('#rig');
 
-          window.addEventListener('wheel', function (event) {
-            let position = el.getAttribute('position');
+        window.addEventListener('wheel', (e) => {
+          let position = rig.getAttribute('position');
+          
+          // 휠 위: 앞으로 이동 (줌인)
+          if (e.deltaY < 0) {
+            position.z -= 0.5;
+          } 
+          // 휠 아래: 뒤로 이동 (줌아웃)
+          else {
+            position.z += 0.5;
+          }
 
-            // 휠 방향에 따라 Z축 이동
-            position.z += event.deltaY * 0.01 * data.speed;
-
-            // 너무 가까워지거나 멀어지는 것 방지
-            position.z = Math.min(Math.max(position.z, -10), 5);
-
-            el.setAttribute('position', position);
-          });
-        }
+          rig.setAttribute('position', position);
+        });
       });
     </script>
-  </head>
 
-  <body>
-    <a-scene>
-      
-      <!-- 자산 -->
-      <a-assets>
-        <a-asset-item id="myModel" src="model.glb"></a-asset-item>
-      </a-assets>
+    <!-- ===================== -->
+    <!-- 3D 모델 배치 -->
+    <!-- ===================== -->
+    <a-entity 
+      gltf-model="#myModel"
+      position="0 0 -3"
+      scale="2 2 2">
+    </a-entity>
 
-      <!-- 하늘 -->
-      <a-sky color="#ECECEC"></a-sky>
+    <!-- ===================== -->
+    <!-- 바닥 -->
+    <!-- ===================== -->
+    <a-plane 
+      rotation="-90 0 0" 
+      width="20" 
+      height="20" 
+      color="#7BC8A4">
+    </a-plane>
 
-      <!-- 바닥 -->
-      <a-plane 
-        rotation="-90 0 0" 
-        width="30" 
-        height="30" 
-        color="#7BC8A4">
-      </a-plane>
+    <!-- ===================== -->
+    <!-- 하늘 -->
+    <!-- ===================== -->
+    <a-sky color="#ECECEC"></a-sky>
 
-      <!-- 조명 -->
-      <a-light type="ambient" intensity="0.8"></a-light>
-      <a-light type="directional" position="5 10 7" intensity="1"></a-light>
+    <!-- ===================== -->
+    <!-- 조명 -->
+    <!-- ===================== -->
+    <!-- 전체 밝기 -->
+    <a-light type="ambient" intensity="0.6"></a-light>
 
-      <!-- 모델 (훨씬 크게 확대) -->
-      <a-entity 
-        gltf-model="#myModel"
-        position="0 0 -1.5"
-        scale="6 6 6">
-      </a-entity>
+    <!-- 방향성 빛 -->
+    <a-light 
+      type="directional" 
+      position="1 3 2" 
+      intensity="0.8">
+    </a-light>
 
-      <!-- 카메라 리그 -->
-      <a-entity id="rig" position="0 1.6 2" mouse-zoom>
-        
-        <!-- 카메라 -->
-        <a-camera 
-          wasd-controls="acceleration: 5"
-          look-controls="pointerLockEnabled: true">
-        </a-camera>
+    <!-- ===================== -->
+    <!-- VR 컨트롤러 -->
+    <!-- ===================== -->
+    <!-- 왼손 컨트롤러 -->
+    <a-entity 
+      laser-controls="hand: left">
+    </a-entity>
 
-        <!-- VR 컨트롤러 -->
-        <a-entity laser-controls="hand: left"></a-entity>
-        <a-entity laser-controls="hand: right"></a-entity>
+    <!-- 오른손 컨트롤러 -->
+    <a-entity 
+      laser-controls="hand: right">
+    </a-entity>
 
-      </a-entity>
-
-    </a-scene>
-  </body>
+  </a-scene>
+</body>
 </html>

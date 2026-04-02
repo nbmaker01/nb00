@@ -1,150 +1,66 @@
 <!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <title>A-Frame GLB Viewer (Final Fix)</title>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>WebXR A-Frame Example</title>
+    <!-- A-Frame 라이브러리 불러오기 -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- VR 컨트롤러와 WASD 이동을 위한 extras -->
+    <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  </head>
+  <body>
+    <!-- A-Frame 씬 시작 -->
+    <a-scene 
+      vr-mode-ui="enabled: true"  <!-- VR 모드 UI 활성화 -->
+      background="color: #ECECEC"  <!-- 기본 배경 색 -->
+      cursor="rayOrigin: mouse">    <!-- 마우스 커서 활성화 (PC용) -->
 
-  <!-- A-Frame -->
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-</head>
+      <!-- 바닥 만들기 -->
+      <a-plane 
+        position="0 0 0" 
+        rotation="-90 0 0" 
+        width="20" 
+        height="20" 
+        color="#7BC8A4" 
+        shadow>
+      </a-plane>
 
-<body>
-  <a-scene>
+      <!-- 하늘 만들기 -->
+      <a-sky color="#87CEEB"></a-sky>
 
-    <!-- ===================== -->
-    <!-- Assets -->
-    <!-- ===================== -->
-    <a-assets>
-      <a-asset-item id="model" src="model.glb"></a-asset-item>
-    </a-assets>
+      <!-- 조명 설정 -->
+      <a-entity light="type: ambient; intensity: 0.5"></a-entity> <!-- 기본 주변광 -->
+      <a-entity light="type: directional; intensity: 1" position="5 10 5" rotation="-45 45 0" castShadow></a-entity> <!-- 태양빛 같은 방향광 -->
 
-    <!-- ===================== -->
-    <!-- 카메라 (속도 낮춤) -->
-    <!-- ===================== -->
-    <a-entity id="rig" position="0 1.6 12">
-      <a-entity
-        id="camera"
-        camera
-        look-controls="pointerLockEnabled: true"
-        wasd-controls="acceleration: 8"> <!-- 속도 ↓ -->
+      <!-- 3D 모델 불러오기 -->
+      <a-entity 
+        gltf-model="#model"
+        position="0 0  -3"   <!-- 앞쪽 중앙 -->
+        scale="2 2 2"        <!-- 적당히 크게 -->
+        rotation="0 30 0"    <!-- 약간 돌아간 상태 -->
+        shadow>
       </a-entity>
-    </a-entity>
 
-    <!-- ===================== -->
-    <!-- 마우스 휠 줌 (속도 낮춤) -->
-    <!-- ===================== -->
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const rig = document.querySelector('#rig');
+      <!-- 모델 정의 -->
+      <a-assets>
+        <a-asset-item id="model" src="model.glb"></a-asset-item>
+      </a-assets>
 
-        window.addEventListener('wheel', (event) => {
-          let pos = rig.getAttribute('position');
-          const speed = 0.5; // 줌 속도 ↓
+      <!-- 카메라 및 컨트롤 -->
+      <a-entity id="player" position="0 1.6 5">
+        <!-- WASD와 마우스 컨트롤 (PC용) -->
+        <a-entity 
+          camera 
+          wasd-controls 
+          look-controls
+          position="0 0 0">
+        </a-entity>
 
-          if (event.deltaY < 0) pos.z -= speed;
-          else pos.z += speed;
+        <!-- VR 컨트롤러 지원 -->
+        <a-entity oculus-touch-controls="hand: left"></a-entity>
+        <a-entity oculus-touch-controls="hand: right"></a-entity>
+      </a-entity>
 
-          rig.setAttribute('position', pos);
-        });
-      });
-    </script>
-
-    <!-- ===================== -->
-    <!-- GLB 모델 -->
-    <!-- ===================== -->
-    <a-entity
-      id="modelEntity"
-      gltf-model="#model"
-      position="0 0 0">
-    </a-entity>
-
-    <!-- ===================== -->
-    <!-- 모델 크기 + 바닥 + 카메라 완전 보정 -->
-    <!-- ===================== -->
-    <script>
-      AFRAME.registerComponent('proper-scale', {
-        init: function () {
-          this.el.addEventListener('model-loaded', () => {
-
-            const obj = this.el.getObject3D('mesh');
-
-            // 1. 원본 크기 측정
-            const box = new THREE.Box3().setFromObject(obj);
-            const size = new THREE.Vector3();
-            const center = new THREE.Vector3();
-
-            box.getSize(size);
-            box.getCenter(center);
-
-            // 2. 모델 중심 정렬
-            obj.position.sub(center);
-
-            // 3. 크게 확대 (건물 느낌)
-            const desiredHeight = 6;
-            const scale = desiredHeight / size.y;
-
-            this.el.setAttribute('scale', `${scale} ${scale} ${scale}`);
-
-            // 4. 다시 bounding 계산 (스케일 반영)
-            const box2 = new THREE.Box3().setFromObject(this.el.object3D);
-
-            // 5. 바닥 정확히 맞추기
-            const minY = box2.min.y;
-            this.el.object3D.position.y -= minY;
-
-            // 6. 카메라 위치 재설정 (바닥 보이게)
-            const rig = document.querySelector('#rig');
-
-            rig.setAttribute('position', {
-              x: 0,
-              y: 1.6,
-              z: Math.max(size.z * scale * 2, 10) // 충분히 뒤로
-            });
-
-          });
-        }
-      });
-
-      document.addEventListener('DOMContentLoaded', () => {
-        document
-          .querySelector('#modelEntity')
-          .setAttribute('proper-scale', '');
-      });
-    </script>
-
-    <!-- ===================== -->
-    <!-- 바닥 (항상 보이게 크게) -->
-    <!-- ===================== -->
-    <a-plane
-      position="0 0 0"
-      rotation="-90 0 0"
-      width="500"
-      height="500"
-      color="#7BC8A4">
-    </a-plane>
-
-    <!-- ===================== -->
-    <!-- 하늘 -->
-    <!-- ===================== -->
-    <a-sky color="#BFDFFF"></a-sky>
-
-    <!-- ===================== -->
-    <!-- 조명 -->
-    <!-- ===================== -->
-    <a-light type="ambient" intensity="0.8"></a-light>
-
-    <a-light
-      type="directional"
-      position="5 10 5"
-      intensity="1.2">
-    </a-light>
-
-    <!-- ===================== -->
-    <!-- VR 컨트롤러 -->
-    <!-- ===================== -->
-    <a-entity laser-controls="hand: left"></a-entity>
-    <a-entity laser-controls="hand: right"></a-entity>
-
-  </a-scene>
-</body>
+    </a-scene>
+  </body>
 </html>

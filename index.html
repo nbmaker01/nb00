@@ -2,63 +2,77 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>A-Frame GLB Example (Adjusted)</title>
-    <!-- A-Frame 라이브러리 불러오기 -->
+    <title>A-Frame GLB Example (Zoom + Bigger Model)</title>
+    <!-- A-Frame 라이브러리 -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+    <script>
+      // 마우스 휠로 줌(앞뒤 이동) 기능 추가
+      AFRAME.registerComponent('mouse-zoom', {
+        schema: {
+          speed: { default: 0.5 } // 줌 속도 (값이 작을수록 천천히)
+        },
+        init: function () {
+          const el = this.el;
+          const data = this.data;
+
+          window.addEventListener('wheel', function (event) {
+            let position = el.getAttribute('position');
+
+            // 휠 방향에 따라 Z축 이동
+            position.z += event.deltaY * 0.01 * data.speed;
+
+            // 너무 가까워지거나 멀어지는 것 방지
+            position.z = Math.min(Math.max(position.z, -10), 5);
+
+            el.setAttribute('position', position);
+          });
+        }
+      });
+    </script>
   </head>
 
   <body>
-    <!-- A-Frame 씬 시작 -->
     <a-scene>
       
-      <!-- 자산(3D 모델 등) 미리 로드 -->
+      <!-- 자산 -->
       <a-assets>
-        <!-- GLB 모델 파일 불러오기 -->
         <a-asset-item id="myModel" src="model.glb"></a-asset-item>
       </a-assets>
 
-      <!-- 하늘(배경) 설정 -->
+      <!-- 하늘 -->
       <a-sky color="#ECECEC"></a-sky>
 
-      <!-- 바닥 설정 -->
+      <!-- 바닥 -->
       <a-plane 
         rotation="-90 0 0" 
-        width="20" 
-        height="20" 
+        width="30" 
+        height="30" 
         color="#7BC8A4">
       </a-plane>
 
-      <!-- 기본 조명 설정 -->
-      <!-- 주변광 -->
-      <a-light type="ambient" color="#FFFFFF" intensity="0.7"></a-light>
-      <!-- 방향광 -->
-      <a-light 
-        type="directional" 
-        position="5 10 7" 
-        intensity="0.9">
-      </a-light>
+      <!-- 조명 -->
+      <a-light type="ambient" intensity="0.8"></a-light>
+      <a-light type="directional" position="5 10 7" intensity="1"></a-light>
 
-      <!-- 3D 모델 배치 -->
-      <!-- 크기를 키우고(scale), 카메라 가까이로 이동 -->
+      <!-- 모델 (훨씬 크게 확대) -->
       <a-entity 
-        gltf-model="#myModel" 
-        position="0 0 -2" 
-        scale="10 10 10">
+        gltf-model="#myModel"
+        position="0 0 -1.5"
+        scale="6 6 6">
       </a-entity>
 
-      <!-- 카메라 및 이동 설정 -->
-      <a-entity id="rig" position="0 1.6 0">
+      <!-- 카메라 리그 -->
+      <a-entity id="rig" position="0 1.6 2" mouse-zoom>
         
         <!-- 카메라 -->
         <a-camera 
-          wasd-controls="acceleration: 8" 
+          wasd-controls="acceleration: 5"
           look-controls="pointerLockEnabled: true">
         </a-camera>
 
-        <!-- VR 컨트롤러 (왼손) -->
+        <!-- VR 컨트롤러 -->
         <a-entity laser-controls="hand: left"></a-entity>
-
-        <!-- VR 컨트롤러 (오른손) -->
         <a-entity laser-controls="hand: right"></a-entity>
 
       </a-entity>

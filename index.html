@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>A-Frame Building Scale Viewer</title>
+  <title>A-Frame GLB Proper Ground Fix</title>
 
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -19,9 +19,9 @@
     </a-assets>
 
     <!-- ===================== -->
-    <!-- 카메라 (사람 키 기준) -->
+    <!-- 카메라 (사람 시점) -->
     <!-- ===================== -->
-    <a-entity id="rig" position="0 1.6 10">
+    <a-entity id="rig" position="0 1.6 8">
       <a-entity
         id="camera"
         camera
@@ -59,16 +59,15 @@
     </a-entity>
 
     <!-- ===================== -->
-    <!-- 건물 크기로 자동 보정 -->
+    <!-- 모델 위치 & 크기 보정 (핵심 수정) -->
     <!-- ===================== -->
     <script>
-      AFRAME.registerComponent('real-scale-building', {
+      AFRAME.registerComponent('fix-model-ground', {
         init: function () {
           this.el.addEventListener('model-loaded', () => {
 
             const model = this.el.getObject3D('mesh');
 
-            // 모델 bounding box 계산
             const box = new THREE.Box3().setFromObject(model);
             const size = new THREE.Vector3();
             const center = new THREE.Vector3();
@@ -80,11 +79,9 @@
             model.position.sub(center);
 
             // =========================
-            // 핵심: 건물 크기로 스케일 조정
-            // 목표 높이 (건물 느낌: 약 10m)
+            // 크기 확대 (건물처럼 크게)
             // =========================
-            const desiredHeight = 10; // 10미터 건물
-
+            const desiredHeight = 8;
             const scale = desiredHeight / size.y;
 
             this.el.setAttribute('scale', {
@@ -93,29 +90,34 @@
               z: scale
             });
 
-            // 바닥에 맞추기
-            this.el.object3D.position.y = (size.y * scale) / 2;
+            // =========================
+            // 바닥에 정확히 붙이기 (중요!)
+            // =========================
+            const newBox = new THREE.Box3().setFromObject(this.el.object3D);
+            const minY = newBox.min.y;
+
+            // 바닥(y=0)에 맞춤
+            this.el.object3D.position.y -= minY;
 
             // =========================
-            // 카메라 위치 자동 조정
+            // 카메라 위치 (바닥이 보이게)
             // =========================
             const rig = document.querySelector('#rig');
 
             rig.setAttribute('position', {
               x: 0,
-              y: 1.6,              // 사람 눈높이
-              z: size.z * scale * 1.5  // 건물 앞 거리
+              y: 1.6,
+              z: size.z * scale * 1.8
             });
 
           });
         }
       });
 
-      // 컴포넌트 적용
       document.addEventListener('DOMContentLoaded', () => {
         document
           .querySelector('#modelEntity')
-          .setAttribute('real-scale-building', '');
+          .setAttribute('fix-model-ground', '');
       });
     </script>
 
@@ -123,6 +125,7 @@
     <!-- 바닥 -->
     <!-- ===================== -->
     <a-plane
+      position="0 0 0"
       rotation="-90 0 0"
       width="200"
       height="200"

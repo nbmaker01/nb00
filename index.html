@@ -2,9 +2,9 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>A-Frame GLB Viewer</title>
+  <title>A-Frame GLB Auto Scale Viewer</title>
 
-  <!-- A-Frame 라이브러리 -->
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 </head>
 
@@ -12,33 +12,25 @@
   <a-scene>
 
     <!-- ===================== -->
-    <!-- Assets: 3D 모델 로드 -->
+    <!-- Assets -->
     <!-- ===================== -->
     <a-assets>
-      <!-- model.glb 파일을 미리 로드 -->
       <a-asset-item id="model" src="model.glb"></a-asset-item>
     </a-assets>
 
     <!-- ===================== -->
-    <!-- 카메라 리그 (이동용) -->
+    <!-- 카메라 리그 -->
     <!-- ===================== -->
-    <!-- rig를 움직이면 카메라도 같이 이동 -->
-    <a-entity id="rig" position="0 1.6 2">
-      
-      <!-- 카메라 -->
-      <!-- look-controls: 마우스로 시점 회전 -->
-      <!-- wasd-controls: 키보드(방향키/WASD) 이동 -->
+    <a-entity id="rig" position="0 1.6 3">
       <a-entity
         camera
         look-controls
-        wasd-controls="acceleration: 25"
-        position="0 0 0">
+        wasd-controls="acceleration: 25">
       </a-entity>
-
     </a-entity>
 
     <!-- ===================== -->
-    <!-- 마우스 휠 줌 기능 -->
+    <!-- 마우스 휠 줌 -->
     <!-- ===================== -->
     <script>
       document.addEventListener('DOMContentLoaded', () => {
@@ -46,34 +38,69 @@
 
         window.addEventListener('wheel', (event) => {
           let pos = rig.getAttribute('position');
+          const speed = 0.5;
 
-          // 줌 속도
-          const zoomSpeed = 0.5;
+          if (event.deltaY < 0) pos.z -= speed;
+          else pos.z += speed;
 
-          // 휠 위 (줌인)
-          if (event.deltaY < 0) {
-            pos.z -= zoomSpeed;
-          } 
-          // 휠 아래 (줌아웃)
-          else {
-            pos.z += zoomSpeed;
-          }
-
-          // 위치 업데이트
           rig.setAttribute('position', pos);
         });
       });
     </script>
 
     <!-- ===================== -->
-    <!-- 3D 모델 (메인) -->
+    <!-- GLB 모델 (자동 크기 조정) -->
     <!-- ===================== -->
-    <!-- 카메라 앞에 크게 보이도록 배치 -->
     <a-entity
+      id="modelEntity"
       gltf-model="#model"
-      position="0 0 -2"
-      scale="2.5 2.5 2.5">
+      position="0 0 -2">
     </a-entity>
+
+    <!-- ===================== -->
+    <!-- 모델 크기 자동 조정 스크립트 -->
+    <!-- ===================== -->
+    <script>
+      AFRAME.registerComponent('auto-scale', {
+        init: function () {
+          this.el.addEventListener('model-loaded', () => {
+            const obj = this.el.getObject3D('mesh');
+
+            // bounding box 계산
+            const box = new THREE.Box3().setFromObject(obj);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+
+            // 가장 큰 축 기준으로 스케일 계산
+            const maxDim = Math.max(size.x, size.y, size.z);
+
+            // 목표 크기 (화면에서 크게 보이도록)
+            const desiredSize = 2;
+
+            const scale = desiredSize / maxDim;
+
+            this.el.setAttribute('scale', {
+              x: scale,
+              y: scale,
+              z: scale
+            });
+
+            // 모델을 바닥에 맞추기 (Y 위치 보정)
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+
+            this.el.object3D.position.y -= (center.y - size.y / 2) * scale;
+          });
+        }
+      });
+
+      // 컴포넌트 적용
+      document.addEventListener('DOMContentLoaded', () => {
+        document
+          .querySelector('#modelEntity')
+          .setAttribute('auto-scale', '');
+      });
+    </script>
 
     <!-- ===================== -->
     <!-- 바닥 -->
@@ -82,21 +109,19 @@
       rotation="-90 0 0"
       width="30"
       height="30"
-      color="#8BC34A">
+      color="#7BC8A4">
     </a-plane>
 
     <!-- ===================== -->
     <!-- 하늘 -->
     <!-- ===================== -->
-    <a-sky color="#DCEFFF"></a-sky>
+    <a-sky color="#ECECEC"></a-sky>
 
     <!-- ===================== -->
     <!-- 조명 -->
     <!-- ===================== -->
-    <!-- 기본 밝기 -->
     <a-light type="ambient" intensity="0.6"></a-light>
 
-    <!-- 방향 조명 -->
     <a-light
       type="directional"
       position="2 4 3"
@@ -106,10 +131,7 @@
     <!-- ===================== -->
     <!-- VR 컨트롤러 -->
     <!-- ===================== -->
-    <!-- 왼손 -->
     <a-entity laser-controls="hand: left"></a-entity>
-
-    <!-- 오른손 -->
     <a-entity laser-controls="hand: right"></a-entity>
 
   </a-scene>

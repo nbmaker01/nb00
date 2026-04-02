@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>A-Frame GLB Proper Ground Fix</title>
+  <title>A-Frame GLB Viewer (Final Fix)</title>
 
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -19,19 +19,19 @@
     </a-assets>
 
     <!-- ===================== -->
-    <!-- 카메라 (사람 시점) -->
+    <!-- 카메라 (속도 낮춤) -->
     <!-- ===================== -->
-    <a-entity id="rig" position="0 1.6 8">
+    <a-entity id="rig" position="0 1.6 12">
       <a-entity
         id="camera"
         camera
-        look-controls
-        wasd-controls="acceleration: 30">
+        look-controls="pointerLockEnabled: true"
+        wasd-controls="acceleration: 8"> <!-- 속도 ↓ -->
       </a-entity>
     </a-entity>
 
     <!-- ===================== -->
-    <!-- 마우스 휠 줌 -->
+    <!-- 마우스 휠 줌 (속도 낮춤) -->
     <!-- ===================== -->
     <script>
       document.addEventListener('DOMContentLoaded', () => {
@@ -39,7 +39,7 @@
 
         window.addEventListener('wheel', (event) => {
           let pos = rig.getAttribute('position');
-          const speed = 1;
+          const speed = 0.5; // 줌 속도 ↓
 
           if (event.deltaY < 0) pos.z -= speed;
           else pos.z += speed;
@@ -59,55 +59,46 @@
     </a-entity>
 
     <!-- ===================== -->
-    <!-- 모델 위치 & 크기 보정 (핵심 수정) -->
+    <!-- 모델 크기 + 바닥 + 카메라 완전 보정 -->
     <!-- ===================== -->
     <script>
-      AFRAME.registerComponent('fix-model-ground', {
+      AFRAME.registerComponent('proper-scale', {
         init: function () {
           this.el.addEventListener('model-loaded', () => {
 
-            const model = this.el.getObject3D('mesh');
+            const obj = this.el.getObject3D('mesh');
 
-            const box = new THREE.Box3().setFromObject(model);
+            // 1. 원본 크기 측정
+            const box = new THREE.Box3().setFromObject(obj);
             const size = new THREE.Vector3();
             const center = new THREE.Vector3();
 
             box.getSize(size);
             box.getCenter(center);
 
-            // 모델 중앙 정렬
-            model.position.sub(center);
+            // 2. 모델 중심 정렬
+            obj.position.sub(center);
 
-            // =========================
-            // 크기 확대 (건물처럼 크게)
-            // =========================
-            const desiredHeight = 8;
+            // 3. 크게 확대 (건물 느낌)
+            const desiredHeight = 6;
             const scale = desiredHeight / size.y;
 
-            this.el.setAttribute('scale', {
-              x: scale,
-              y: scale,
-              z: scale
-            });
+            this.el.setAttribute('scale', `${scale} ${scale} ${scale}`);
 
-            // =========================
-            // 바닥에 정확히 붙이기 (중요!)
-            // =========================
-            const newBox = new THREE.Box3().setFromObject(this.el.object3D);
-            const minY = newBox.min.y;
+            // 4. 다시 bounding 계산 (스케일 반영)
+            const box2 = new THREE.Box3().setFromObject(this.el.object3D);
 
-            // 바닥(y=0)에 맞춤
+            // 5. 바닥 정확히 맞추기
+            const minY = box2.min.y;
             this.el.object3D.position.y -= minY;
 
-            // =========================
-            // 카메라 위치 (바닥이 보이게)
-            // =========================
+            // 6. 카메라 위치 재설정 (바닥 보이게)
             const rig = document.querySelector('#rig');
 
             rig.setAttribute('position', {
               x: 0,
               y: 1.6,
-              z: size.z * scale * 1.8
+              z: Math.max(size.z * scale * 2, 10) // 충분히 뒤로
             });
 
           });
@@ -117,18 +108,18 @@
       document.addEventListener('DOMContentLoaded', () => {
         document
           .querySelector('#modelEntity')
-          .setAttribute('fix-model-ground', '');
+          .setAttribute('proper-scale', '');
       });
     </script>
 
     <!-- ===================== -->
-    <!-- 바닥 -->
+    <!-- 바닥 (항상 보이게 크게) -->
     <!-- ===================== -->
     <a-plane
       position="0 0 0"
       rotation="-90 0 0"
-      width="200"
-      height="200"
+      width="500"
+      height="500"
       color="#7BC8A4">
     </a-plane>
 
@@ -140,7 +131,7 @@
     <!-- ===================== -->
     <!-- 조명 -->
     <!-- ===================== -->
-    <a-light type="ambient" intensity="0.7"></a-light>
+    <a-light type="ambient" intensity="0.8"></a-light>
 
     <a-light
       type="directional"
